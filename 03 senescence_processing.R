@@ -164,19 +164,25 @@ n_area_final_plot
 dev.off()
 
 ###############################
-## read in carbon fractions
+## read in carbon fractions from initial bulks
 
 carbon_fractions<-read.csv("traits/CarbonFractions/carbon_fractions_bags.csv")
 chem_samples<-read.csv("traits/CarbonFractions/leaf_chemistry_samples.csv")
 bulk_samples<-read.csv("summary/bulk_leaf_samples.csv")
 
-chem_samples$site_id<-bulk_samples$site_id[match(chem_samples$sample_id,bulk_samples$sample_id)]
-chem_samples$scientific_name<-bulk_samples$scientific_name[match(chem_samples$sample_id,bulk_samples$sample_id)]
-carbon_fractions$site_id<-chem_samples$site_id[match(carbon_fractions$bottle_id,chem_samples$bottle_id)]
-carbon_fractions$scientific_name<-chem_samples$scientific_name[match(carbon_fractions$bottle_id,chem_samples$bottle_id)]
-carbon_fractions<-carbon_fractions[!is.na(carbon_fractions$scientific_name),]
+chem_samples$plant_id<-bulk_samples$plant_id[match(chem_samples$sample_id,bulk_samples$sample_id)]
+carbon_fractions$plant_id<-chem_samples$plant_id[match(carbon_fractions$bottle_id,chem_samples$bottle_id)]
+carbon_fractions<-carbon_fractions[!is.na(carbon_fractions$plant_id),]
 
-ggplot(carbon_fractions,aes(y=hemicellulose_perc,x=scientific_name,color=site_id))+
+plants$soluble_perc<-carbon_fractions$soluble_perc[match(plants$plant_id,carbon_fractions$plant_id)]
+plants$hemicellulose_perc<-carbon_fractions$hemicellulose_perc[match(plants$plant_id,carbon_fractions$plant_id)]
+plants$cellulose_perc<-carbon_fractions$cellulose_perc[match(plants$plant_id,carbon_fractions$plant_id)]
+plants$lignin_perc<-carbon_fractions$lignin_perc[match(plants$plant_id,carbon_fractions$plant_id)]
+
+ggplot(carbon_fractions,
+       aes(y=hemicellulose_perc,
+           x=scientific_name,
+           color=site_id))+
   geom_violin(size=2)+
   labs(x="Scientific name",
        y="Hemicellulose (%)",color="Site")+
