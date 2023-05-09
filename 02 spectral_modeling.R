@@ -148,38 +148,160 @@ car_area_val_pred<-data.frame(bulk=meta(spectra_test)$bulk_id,
 
 spectra_tagged<-readRDS("processed_data/spectra_tagged.rds")
 
+## change to English for plots
+levels(meta(spectra_tagged)$site_id)[levels(meta(spectra_tagged)$site_id)=="MSB_Tourbiere"]<-"MSB_Bog"
+
 meta(spectra_tagged)$LMA<-predict(LMA_model,newdata=as.matrix(spectra_tagged),ncomp=ncomp_LMA)[,,1]
 meta(spectra_tagged)$LDMC<-predict(LDMC_model,newdata=as.matrix(spectra_tagged),ncomp=ncomp_LDMC)[,,1]
 meta(spectra_tagged)$EWT<-predict(EWT_model,newdata=as.matrix(spectra_tagged),ncomp=ncomp_EWT)[,,1]
 meta(spectra_tagged)$chl_area<-predict(chl_area_model,newdata=as.matrix(spectra_tagged),ncomp=ncomp_EWT)[,,1]^2
 meta(spectra_tagged)$car_area<-predict(car_area_model,newdata=as.matrix(spectra_tagged),ncomp=ncomp_EWT)[,,1]^2
+## an anthocyanin index, until we have actual anthocyanin data
+meta(spectra_tagged)$ARI<-1/spectra_tagged[,550]-1/spectra_tagged[,700]
+
+colors<-c("Acer rubrum Linnaeus"="firebrick1",
+          "Betula populifolia Marshall"="gold1")
 
 ggplot(meta(spectra_tagged),aes(x=date,y=LMA,color=species_id,fill=site_id))+
   stat_summary(geom="point",fun="mean",size=4,aes(shape=site_id))+
   stat_summary(geom="line",fun="mean",size=2,aes(linetype=site_id))+
   stat_summary(geom="errorbar",size=2,fun.data="mean_se")+
-  coord_cartesian(ylim=c(0,70))+theme_bw()
+  coord_cartesian(ylim=c(0,70))+
+  scale_color_manual(values=colors)+
+  theme_bw()+theme(text=element_text(size=20),
+                   panel.grid.major = element_blank(),
+                   panel.grid.minor = element_blank(),
+                   legend.position = c(0.25,0.7),
+                   legend.key.width = unit(1.5,"cm"),
+                   legend.background = element_rect(fill="transparent"))+
+  labs(x="Date",color="Species",shape="Site",linetype="Site",
+       y="LMA")
 
 ggplot(meta(spectra_tagged),aes(x=date,y=LDMC,color=species_id,fill=site_id))+
   stat_summary(geom="point",fun="mean",size=4,aes(shape=site_id))+
   stat_summary(geom="line",fun="mean",size=2,aes(linetype=site_id))+
-  stat_summary(geom="errorbar",size=2,fun.data="mean_se")+theme_bw()
+  stat_summary(geom="errorbar",size=2,fun.data="mean_se")+
+  scale_color_manual(values=colors)+
+  theme_bw()+theme(text=element_text(size=20),
+                   panel.grid.major = element_blank(),
+                   panel.grid.minor = element_blank(),
+                   legend.position = c(0.25,0.7),
+                   legend.key.width = unit(1.5,"cm"),
+                   legend.background = element_rect(fill="transparent"))+
+  labs(x="Date",color="Species",shape="Site",linetype="Site",
+       y="LDMC")
 
 ggplot(meta(spectra_tagged),aes(x=date,y=EWT,color=species_id))+
   stat_summary(geom="point",fun="mean",size=4,aes(shape=site_id))+
   stat_summary(geom="line",fun="mean",size=2,aes(linetype=site_id))+
   stat_summary(geom="errorbar",size=2,fun.data="mean_se")+
-  theme_bw()+
-  coord_cartesian(ylim=c(0,0.009))
+  coord_cartesian(ylim=c(0,0.009))+
+  scale_color_manual(values=colors)+
+  theme_bw()+theme(text=element_text(size=20),
+                   panel.grid.major = element_blank(),
+                   panel.grid.minor = element_blank(),
+                   legend.position = c(0.25,0.7),
+                   legend.key.width = unit(1.5,"cm"),
+                   legend.background = element_rect(fill="transparent"))+
+  labs(x="Date",color="Species",shape="Site",linetype="Site",
+       y="EWT")
 
 ggplot(meta(spectra_tagged),aes(x=date,y=chl_area,color=species_id))+
   stat_summary(geom="point",fun="mean",size=4,aes(shape=site_id))+
   stat_summary(geom="line",fun="mean",size=2,aes(linetype=site_id))+
   stat_summary(geom="errorbar",size=2,fun.data="mean_se")+
-  theme_bw()
+  scale_color_manual(values=colors)+
+  theme_bw()+theme(text=element_text(size=20),
+                   panel.grid.major = element_blank(),
+                   panel.grid.minor = element_blank(),
+                   legend.position = c(0.25,0.7),
+                   legend.key.width = unit(1.5,"cm"),
+                   legend.background = element_rect(fill="transparent"))+
+  labs(x="Date",color="Species",shape="Site",linetype="Site",
+       y="Chl per area")
 
 ggplot(meta(spectra_tagged),aes(x=date,y=car_area,color=species_id))+
   stat_summary(geom="point",fun="mean",size=4,aes(shape=site_id))+
   stat_summary(geom="line",fun="mean",size=2,aes(linetype=site_id))+
   stat_summary(geom="errorbar",size=2,fun.data="mean_se")+
-  theme_bw()
+  scale_color_manual(values=colors)+
+  theme_bw()+theme(text=element_text(size=20),
+                   panel.grid.major = element_blank(),
+                   panel.grid.minor = element_blank(),
+                   legend.position = c(0.25,0.7),
+                   legend.key.width = unit(1.5,"cm"),
+                   legend.background = element_rect(fill="transparent"))+
+  labs(x="Date",color="Species",shape="Site",linetype="Site",
+       y="Car per area")
+
+###########################################
+## visualize tagged spectra
+
+####################################
+## summarize spectra
+
+# spectra_Hermine_Acer<-spectra_tagged[meta(spectra_tagged)$species_id=="Acer rubrum Linnaeus" & meta(spectra_tagged)$site_id=="MSB_Hermine",]
+# spectra_Hermine_Betula<-spectra_tagged[meta(spectra_tagged)$species_id=="Betula populifolia Marshall" & meta(spectra_tagged)$site_id=="MSB_Hermine",]
+# spectra_Tourbiere_Acer<-spectra_tagged[meta(spectra_tagged)$species_id=="Acer rubrum Linnaeus" & meta(spectra_tagged)$site_id=="MSB_Tourbiere",]
+# spectra_Tourbiere_Betula<-spectra_tagged[meta(spectra_tagged)$species_id=="Betula populifolia Marshall" & meta(spectra_tagged)$site_id=="MSB_Tourbiere",]
+# 
+# spectraHA_agg<-aggregate(as.matrix(spectra_Hermine_Acer),
+#                          by=list(meta(spectra_Hermine_Acer)$date),FUN=median)
+# spectraHA_agg_long<-melt(spectraHA_agg,id.vars = "Group.1")
+# spectraHA_agg_long$variable<-as.numeric(as.character(spectraHA_agg_long$variable))
+# spectraHA_agg_long$Group.1<-as.factor(spectraHA_agg_long$Group.1)
+# 
+# spectraHA<-ggplot(spectraHA_agg_long,aes(x=variable,y=value,color=Group.1))+
+#   geom_line(size=1)+
+#   theme_bw()+
+#   coord_cartesian(ylim=c(0,0.55))+
+#   labs(title = "Hermine Acer")
+# 
+# spectraHB_agg<-aggregate(as.matrix(spectra_Hermine_Betula),
+#                          by=list(meta(spectra_Hermine_Betula)$date),FUN=median)
+# spectraHB_agg_long<-melt(spectraHB_agg,id.vars = "Group.1")
+# spectraHB_agg_long$variable<-as.numeric(as.character(spectraHB_agg_long$variable))
+# spectraHB_agg_long$Group.1<-as.factor(spectraHB_agg_long$Group.1)
+# 
+# spectraHB<-ggplot(spectraHB_agg_long,aes(x=variable,y=value,color=Group.1))+
+#   geom_line(size=1)+
+#   theme_bw()+
+#   coord_cartesian(ylim=c(0,0.55))+
+#   labs(title = "Hermine Betula")
+# 
+# spectraTA_agg<-aggregate(as.matrix(spectra_Tourbiere_Acer),
+#                          by=list(meta(spectra_Tourbiere_Acer)$date),FUN=median)
+# spectraTA_agg_long<-melt(spectraTA_agg,id.vars = "Group.1")
+# spectraTA_agg_long$variable<-as.numeric(as.character(spectraTA_agg_long$variable))
+# spectraTA_agg_long$Group.1<-as.factor(spectraTA_agg_long$Group.1)
+# 
+# spectraTA<-ggplot(spectraTA_agg_long,aes(x=variable,y=value,color=Group.1))+
+#   geom_line(size=1)+
+#   theme_bw()+
+#   coord_cartesian(ylim=c(0,0.55))+
+#   labs(title = "Tourbiere Acer")
+# 
+# spectraTB_agg<-aggregate(as.matrix(spectra_Tourbiere_Betula),
+#                          by=list(meta(spectra_Tourbiere_Betula)$date),FUN=median)
+# spectraTB_agg_long<-melt(spectraTB_agg,id.vars = "Group.1")
+# spectraTB_agg_long$variable<-as.numeric(as.character(spectraTB_agg_long$variable))
+# spectraTB_agg_long$Group.1<-as.factor(spectraTB_agg_long$Group.1)
+# 
+# spectraTB<-ggplot(spectraTB_agg_long,aes(x=variable,y=value,color=Group.1))+
+#   geom_line(size=1)+
+#   theme_bw()+
+#   coord_cartesian(ylim=c(0,0.55))+
+#   labs(title = "Tourbiere Betula")
+# 
+# (spectraTA/spectraTB)|(spectraHA/spectraHB)
+
+spectra_tagged_long<-melt(as.data.frame(spectra_tagged),
+                          id.vars = c("sample_name",colnames(meta(spectra_tagged))))
+spectra_tagged_long$variable<-as.numeric(as.character(spectra_tagged_long$variable))
+
+pdf("manuscript/spectra_panels.pdf",height=20,width=16)
+ggplot(spectra_tagged_long,aes(x=variable,y=value))+
+  stat_summary(geom="line",fun="median",size=1.5,aes(color=site_id))+
+  facet_grid(week~species_id)+
+  theme_bw()+theme(text=element_text(size=20))
+dev.off()
