@@ -60,7 +60,7 @@ avg_sen<-aggregate(sCombined[,c("sen_JD")],
 ## calculate N resorption efficiency
 
 plants<-read.csv("summary/plants.csv")
-gestionnaire<-read.csv("summary/2021-LeafSenescence_gestionnaire - Labwork management sheet.csv")
+bulk_samples<-read.csv("summary/bulk_leaf_samples.csv")
 plants$avg_sen<-avg_sen$x[match(plants$plant_id,avg_sen$Group.1)]
 
 ## change to English for figures
@@ -73,10 +73,9 @@ plants$n_mass_init<-N_init$n_perc[N_init_match]
 
 ## initial LMA
 LMA<-read.csv("traits/LMA/2021-LeafSenescence_Leaf_disks_water_samples_for_LMA - Sheet1.csv")
-LMA$plant_id<-gestionnaire$Plant_id[match(LMA$Bulk_id,gestionnaire$bulk_id)]
+LMA$plant_id<-bulk_samples$plant_id[match(LMA$Bulk_id,bulk_samples$sample_id)]
 LMA_init<-LMA[LMA$date_sampled %in% c("2021-08-17","2021-08-19"),]
-LMA_init_match<-sapply(plants$plant_id,function(x) grep(pattern = x,x = LMA_init$plant_id))
-plants$LMA_init<-LMA$leaf_mass_per_area_g_m2[LMA_init_match]
+plants$LMA_init<-LMA$leaf_mass_per_area_g_m2[match(plants$plant_id,LMA_init$plant_id)]
 plants$n_area_init<-(plants$n_mass_init/100)*plants$LMA_init
 
 ## final N per mass
@@ -168,7 +167,6 @@ dev.off()
 
 carbon_fractions<-read.csv("traits/CarbonFractions/carbon_fractions_bags.csv")
 chem_samples<-read.csv("traits/CarbonFractions/leaf_chemistry_samples.csv")
-bulk_samples<-read.csv("summary/bulk_leaf_samples.csv")
 
 chem_samples$plant_id<-bulk_samples$plant_id[match(chem_samples$sample_id,bulk_samples$sample_id)]
 carbon_fractions$plant_id<-chem_samples$plant_id[match(carbon_fractions$bottle_id,chem_samples$bottle_id)]
@@ -179,8 +177,44 @@ plants$hemicellulose_perc<-carbon_fractions$hemicellulose_perc[match(plants$plan
 plants$cellulose_perc<-carbon_fractions$cellulose_perc[match(plants$plant_id,carbon_fractions$plant_id)]
 plants$lignin_perc<-carbon_fractions$lignin_perc[match(plants$plant_id,carbon_fractions$plant_id)]
 
-ggplot(carbon_fractions,
+ggplot(plants,
        aes(y=hemicellulose_perc,
+           x=scientific_name,
+           color=site_id))+
+  geom_violin(size=2)+
+  labs(x="Scientific name",
+       y="Hemicellulose (%)",color="Site")+
+  theme_bw()+
+  theme(text=element_text(size=20),
+        legend.position=c(0.2,0.8))
+
+#################################
+## add initial pigment concentrations
+
+gestionnaire<-read.csv("summary/2021-LeafSenescence_gestionnaire - Labwork management sheet.csv")
+
+pigments<-read.csv("traits/ChlCar/pigments_extracts.csv")
+pigments<-pigments[-which(pigments$quality_flag_extract=="bad"),]
+pigments<-pigments[which(pigments$sample_type=="sample"),]
+
+## get dates to pick out the first sampling week
+pigments$sampling_date<-gestionnaire$sampling_date[match(pigments$vial_id,gestionnaire$bulk_id)]
+pigments$site_id<-gestionnaire$site_id[match(pigments$vial_id,gestionnaire$bulk_id)]
+pigments$scientific_name<-gestionnaire$scientific_name[match(pigments$vial_id,gestionnaire$bulk_id)]
+pigments$plant_id<-bulk_samples$plant_id[match(pigments$vial_id,bulk_samples$sample_id)]
+pigments_init<-pigments[which(pigments$sampling_date %in% c("2021-08-17","2021-08-19")),]
+
+plants$chla_mass_init<-pigments_init$chla_mg_g_disk_mass[match(plants$plant_id,pigments$plant_id)]
+plants$chlb_mass_init<-pigments_init$chla_mg_g_disk_mass[match(plants$plant_id,pigments$plant_id)]
+plants$chl_mass_init<-plants$chla_mass_init+plants$chlb_mass_init
+plants$car_mass_init<-pigments_init$carot_mg_g_disk_mass[match(plants$plant_id,pigments$plant_id)]
+
+plants$chl_area_init<-plants$chl_mass_init*plants$LMA_init
+plants$car_area_init<-plants$car_mass_init*plants$LMA_init
+plants$car_chl_rat_init<-plants$car_area_init/plants$chl_area_init
+
+ggplot(plants,
+       aes(y=car_chl_rat_init,
            x=scientific_name,
            color=site_id))+
   geom_violin(size=2)+
