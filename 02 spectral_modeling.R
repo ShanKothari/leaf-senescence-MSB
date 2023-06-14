@@ -156,8 +156,19 @@ meta(spectra_tagged)$LDMC<-predict(LDMC_model,newdata=as.matrix(spectra_tagged),
 meta(spectra_tagged)$EWT<-predict(EWT_model,newdata=as.matrix(spectra_tagged),ncomp=ncomp_EWT)[,,1]
 meta(spectra_tagged)$chl_area<-predict(chl_area_model,newdata=as.matrix(spectra_tagged),ncomp=ncomp_EWT)[,,1]^2
 meta(spectra_tagged)$car_area<-predict(car_area_model,newdata=as.matrix(spectra_tagged),ncomp=ncomp_EWT)[,,1]^2
+
 ## an anthocyanin index, until we have actual anthocyanin data
-meta(spectra_tagged)$ARI<-1/spectra_tagged[,550]-1/spectra_tagged[,700]
+meta(spectra_tagged)$ARI<-(1/spectra_tagged[,550]-1/spectra_tagged[,700])/100
+meta(spectra_tagged)$ARI2<-(1/rowMeans(as.matrix(spectra_tagged[,540:560]))-1/rowMeans(as.matrix(spectra_tagged[,690:710])))/100
+
+meta(spectra_tagged)$mARI<-(1/spectra_tagged[,550]-1/spectra_tagged[,700])*spectra_tagged[,780]
+meta(spectra_tagged)$mARI2<-(1/rowMeans(as.matrix(spectra_tagged[,540:560]))-1/rowMeans(as.matrix(spectra_tagged[,690:710])))*rowMeans(as.matrix(spectra_tagged[,760:800]))
+
+## based on ARI regression model from Gitelseon et al. 2001
+meta(spectra_tagged)$anth_est<- (meta(spectra_tagged)$ARI-0.0047)/0.0038
+## based on ARI regression model from Gitelson et al. 2009
+## not suitable for samples with very high ARI
+meta(spectra_tagged)$anth_est2<- -log(1-meta(spectra_tagged)$ARI2/0.22)/0.029
 
 colors<-c("Acer rubrum Linnaeus"="firebrick1",
           "Betula populifolia Marshall"="gold1")
@@ -233,6 +244,34 @@ ggplot(meta(spectra_tagged),aes(x=date,y=car_area,color=species_id))+
                    legend.background = element_rect(fill="transparent"))+
   labs(x="Date",color="Species",shape="Site",linetype="Site",
        y="Car per area")
+
+ggplot(meta(spectra_tagged),aes(x=date,y=ARI2,color=species_id))+
+  stat_summary(geom="point",fun="mean",size=4,aes(shape=site_id))+
+  stat_summary(geom="line",fun="mean",size=2,aes(linetype=site_id))+
+  stat_summary(geom="errorbar",size=2,fun.data="mean_se")+
+  scale_color_manual(values=colors)+
+  theme_bw()+theme(text=element_text(size=20),
+                   panel.grid.major = element_blank(),
+                   panel.grid.minor = element_blank(),
+                   legend.position = c(0.25,0.7),
+                   legend.key.width = unit(1.5,"cm"),
+                   legend.background = element_rect(fill="transparent"))+
+  labs(x="Date",color="Species",shape="Site",linetype="Site",
+       y="ARI")
+
+ggplot(meta(spectra_tagged),aes(x=date,y=anth_est,color=species_id))+
+  stat_summary(geom="point",fun="mean",size=4,aes(shape=site_id))+
+  stat_summary(geom="line",fun="mean",size=2,aes(linetype=site_id))+
+  stat_summary(geom="errorbar",size=2,fun.data="mean_se")+
+  scale_color_manual(values=colors)+
+  theme_bw()+theme(text=element_text(size=20),
+                   panel.grid.major = element_blank(),
+                   panel.grid.minor = element_blank(),
+                   legend.position = c(0.25,0.7),
+                   legend.key.width = unit(1.5,"cm"),
+                   legend.background = element_rect(fill="transparent"))+
+  labs(x="Date",color="Species",shape="Site",linetype="Site",
+       y="Estimated anthocyanins")
 
 ###########################################
 ## visualize tagged spectra
