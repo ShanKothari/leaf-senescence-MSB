@@ -2,8 +2,9 @@ library(spectrolab)
 library(stringr)
 library(reshape2)
 library(dplyr)
+library(ggplot2)
 
-setwd("C:/Users/kotha020/Dropbox/PostdocProjects/LeafSenescence")
+setwd("C:/Users/querc/Dropbox/PostdocProjects/LeafSenescence")
 
 #####################################
 ## read spectra
@@ -69,7 +70,7 @@ spectra_all<-spectra_all[-grep("senesced",meta(spectra_all)$sample_remarks)]
 ## matching sensors
 
 sensor.ends<-NULL
-## find indices of 
+## find indices of last wavelength for first two sensors
 for(i in 1:(ncol(spectra_all)-1)){if(bands(spectra_all)[i]>bands(spectra_all)[i+1]) sensor.ends<-c(sensor.ends,i)}
 
 spectra_s1_bands<-bands(spectra_all)[1:sensor.ends[1]]
@@ -80,9 +81,9 @@ spectra_s1<-spectra_all[,spectra_s1_bands]
 spectra_s2<-spectra_all[,spectra_s2_bands]
 spectra_s3<-spectra_all[,spectra_s3_bands]
   
-spectra_s1_resamp<-as.matrix(resample(spectra_s1,new_wvls = 400:1010))
-spectra_s2_resamp<-as.matrix(resample(spectra_s2,new_wvls = 1000:1910))
-spectra_s3_resamp<-as.matrix(resample(spectra_s3,new_wvls = 1895:2400))
+spectra_s1_resamp<-as.matrix(resample(spectra_s1,new_bands = 400:1010))
+spectra_s2_resamp<-as.matrix(resample(spectra_s2,new_bands = 1000:1910))
+spectra_s3_resamp<-as.matrix(resample(spectra_s3,new_bands = 1895:2400))
 spectra_resamp<-do.call(cbind,args = list(spectra_s1_resamp,
                                           spectra_s2_resamp,
                                           spectra_s3_resamp))
@@ -136,16 +137,60 @@ saveRDS(spectra_bulk,"processed_data/spectra_bulk.rds")
 ## senesced, dried spectra
 
 ## these are spectra of senesced leaves measured in the lab
+sen_spectra_raw<-read_spectra("spectra/2021-11-29_senesced",format="sig")
+
+sensor.ends<-NULL
+## find indices of last wavelength for first two sensors
+for(i in 1:(ncol(sen_spectra_raw)-1)){if(bands(sen_spectra_raw)[i]>bands(sen_spectra_raw)[i+1]) sensor.ends<-c(sensor.ends,i)}
+
+sen_s1_bands<-bands(sen_spectra_raw)[1:sensor.ends[1]]
+sen_s2_bands<-bands(sen_spectra_raw)[(sensor.ends[1]+1):sensor.ends[2]]
+sen_s3_bands<-bands(sen_spectra_raw)[(sensor.ends[2]+1):ncol(sen_spectra_raw)]
+
+sen_s1<-sen_spectra_raw[,sen_s1_bands]
+sen_s2<-sen_spectra_raw[,sen_s2_bands]
+sen_s3<-sen_spectra_raw[,sen_s3_bands]
+
+sen_s1_resamp<-as.matrix(resample(sen_s1,new_bands = 400:1010))
+sen_s2_resamp<-as.matrix(resample(sen_s2,new_bands = 1000:1910))
+sen_s3_resamp<-as.matrix(resample(sen_s3,new_bands = 1895:2400))
+sen_resamp<-do.call(cbind,args = list(sen_s1_resamp,
+                                          sen_s2_resamp,
+                                          sen_s3_resamp))
+
+sen_resamp_long<-melt(sen_resamp,id.vars="sample_id")
+colnames(sen_resamp_long)<-c("sample_id","wavelength","reflectance")
+
+sen_resamp_long$wvl_id<-paste(sen_resamp_long$sample_id,sen_resamp_long$wavelength,sep="_")
+dup_ids_ref<-sen_resamp_long$wvl_id[duplicated(sen_resamp_long$wvl_id)]
+sen_resamp_long_no_dups<-sen_resamp_long[-which(sen_resamp_long$wvl_id %in% dup_ids_ref),]
+inter_wvls<-400:2400
+
+## apply linear interpolation step over sensor overlap
+sen_resamp_long_cleaned <-sen_resamp_long_no_dups%>%
+  group_by(sample_id) %>%
+  do(interpolate(.))
+
+sen_cleaned<-reshape(data.frame(sen_resamp_long_cleaned),
+                         idvar="sample_id",
+                         timevar="wavelength",
+                         direction="wide")
+
+sen_cleaned<-spectra(sen_cleaned[,-1],
+                         bands=400:2400,
+                         names=sen_cleaned[,1])
+sen_spectra<-match_sensors(sen_cleaned,splice_at = 1005,interpolate_wvl = 10)
+
+######################################
+## attach metadata to senesced leaves
+
+## read metadata
 sen_md<-read.csv("spectra/MSB_Senesced_11-29-2021.csv")
 sen_md$Scan<-str_pad(sen_md$Scan,4,pad="0")
 sen_md$file_name<-paste(sen_md$Basefile,sen_md$Scan,sep="_")
 
-sen_spectra<-read_spectra("spectra/2021-11-29_senesced",format="sig")
 names(sen_spectra)<-gsub(pattern=".sig",replacement="",names(sen_spectra))
 sen_match<-match(names(sen_spectra),sen_md$file_name)
-
-## change to English for plots
-meta(sen_spectra)$site_id[which(meta(sen_spectra)$site_id=="MSB_Tourbiere")]<-"MSB_Bog"
 
 meta(sen_spectra)$plant_id<-sen_md$Plant[sen_match]
 meta(sen_spectra)$leaf_number<-sen_md$Leaf[sen_match]
@@ -155,18 +200,21 @@ meta(sen_spectra)$leaf_id<-paste(meta(sen_spectra)$plant_id,meta(sen_spectra)$le
 plants<-read.csv("summary/plants.csv")
 meta(sen_spectra)$species_id<-plants$scientific_name[match(meta(sen_spectra)$plant_id,plants$plant_id)]
 meta(sen_spectra)$site_id<-plants$site_id[match(meta(sen_spectra)$plant_id,plants$plant_id)]
+## change to English for plots
+meta(sen_spectra)$site_id[which(meta(sen_spectra)$site_id=="MSB_Tourbiere")]<-"MSB_Bog"
 
 sen_spectra<-sen_spectra[-which(meta(sen_spectra)$leaf_number %in% c("WR","BR")),]
 sen_spectra<-sen_spectra[-which(meta(sen_spectra)$leaf_id=="NA_NA"),]
 sen_spectra<-sen_spectra[-grep("BAD",meta(sen_spectra)$Remarks),]
 
-meta(sen_spectra)$ARI<-1/sen_spectra[,"550.2"]-1/sen_spectra[,"699.5"]
-meta(sen_spectra)$PSRI<-(sen_spectra[,"678"]-sen_spectra[,"500.7"])/sen_spectra[,"749.8"]
+meta(sen_spectra)$ARI<-(1/(sen_spectra[,550])-1/sen_spectra[,700])/100
+meta(sen_spectra)$PSRI<-(sen_spectra[,678]-sen_spectra[,500])/sen_spectra[,750]
 
 colors<-c("Acer rubrum Linnaeus"="firebrick1",
           "Betula populifolia Marshall"="gold1")
 
-ARI_senesced<-ggplot(meta(sen_spectra),aes(x=site_id,y=ARI,color=species_id))+
+ARI_senesced<-ggplot(meta(sen_spectra),
+                     aes(x=site_id,y=ARI,color=species_id))+
   geom_violin(size=2)+
   theme_bw()+
   scale_color_manual(values=colors)+
