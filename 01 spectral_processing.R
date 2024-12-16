@@ -80,10 +80,10 @@ spectra_s3_bands<-bands(spectra_all)[(sensor.ends[2]+1):ncol(spectra_all)]
 spectra_s1<-spectra_all[,spectra_s1_bands]
 spectra_s2<-spectra_all[,spectra_s2_bands]
 spectra_s3<-spectra_all[,spectra_s3_bands]
-  
+
 spectra_s1_resamp<-as.matrix(resample(spectra_s1,new_bands = 400:1010))
 spectra_s2_resamp<-as.matrix(resample(spectra_s2,new_bands = 1000:1910))
-spectra_s3_resamp<-as.matrix(resample(spectra_s3,new_bands = 1895:2400))
+spectra_s3_resamp<-as.matrix(resample(spectra_s3,new_bands = 1895:2500))
 spectra_resamp<-do.call(cbind,args = list(spectra_s1_resamp,
                                           spectra_s2_resamp,
                                           spectra_s3_resamp))
